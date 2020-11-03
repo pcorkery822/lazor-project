@@ -147,10 +147,9 @@ class Grid:
                 number of refract blocks in the board
             laser:
                 list of lists of all lasers consisting of origins and direction
-                eg. [[(1,3),(-1,-1)],[(2,4), (1,-1)]] - 2 lasers
-                L1 - origin (1,3), direction (-1,-1)
-                L2 - origin (2,4), direction (1, -1)
-            hole:
+                for example [[(1,3),(-1,-1)],[(2,4), (1,-1)]]  denotes 2 lasers
+                [[origin, direction], [origin, direction]]
+            points:
                 list of hole points that the laser has to intersect
         *** Returns ***
             none
