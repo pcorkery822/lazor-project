@@ -124,7 +124,54 @@ def solve_puzzle(grid, empty, laser, blocks, points):
         grid_new = grid
 
 
+class Grid:
+    """
+    This class creates objects which are representations of the board. There
+    different boards generated each with different placements of the blocks.
+    """
 
+    def __init__(self, board, A_blocks, B_blocks, C_blocks, laser, points):
+        """
+        This function initializes and object
+
+        *** Parameters ***
+            self:
+                variable that holds all the data regarding the class object
+            board:
+                n*m matrix consisting of some or all of o, x, A, B and C
+            A_blocks:
+                number of reflect blocks in the board
+            B_blocks:
+                number of absorb blocks in the board
+            C_blocks:
+                number of refract blocks in the board
+            laser:
+                list of lists of all lasers consisting of origins and direction
+                eg. [[(1,3),(-1,-1)],[(2,4), (1,-1)]] - 2 lasers
+                L1 - origin (1,3), direction (-1,-1)
+                L2 - origin (2,4), direction (1, -1)
+            hole:
+                list of hole points that the laser has to intersect
+        *** Returns ***
+            none
+        """
+        self.board = board
+        self.A = A_blocks
+        self.B = B_blocks
+        self.C = C_blocks
+        self.L = laser
+        self.H = points
+        length = 2 * len(self.board) + 1
+        width = 2 * len(self.board[0]) + 1
+        grid = []
+        for i in range(length):
+            grid.append([])
+            for j in range(width):
+                grid[i].append('x')
+        for i in range(len(self.board)):
+            for j in range(len(self.board[0])):
+                grid[2 * i + 1][2 * j + 1] = self.board[i][j]
+        self.grid = grid
 
 
 if __name__ == '__main__':
