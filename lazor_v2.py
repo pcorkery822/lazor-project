@@ -32,6 +32,51 @@ class Blocks:
         return v, new_las
 
 
+class Grid:
+    """
+    This class creates objects which are representations of the board. There
+    different boards generated each with different placements of the blocks.
+    """
+
+    def __init__(self, board, blocks, laser, points):
+        """
+        This function initializes and object
+
+        *** Parameters ***
+            self:
+                variable that holds all the data regarding the class object
+            board:
+                n*m matrix consisting of some or all of o, x, A, B and C
+            blocks:
+                list containing the number of movable blocks of each type
+            laser:
+                list of lists of all lasers consisting of origins and direction
+                for example [[(1,3),(-1,-1)],[(2,4), (1,-1)]]  denotes 2 lasers
+                [[origin, direction], [origin, direction]]
+            points:
+                list of hole points that the laser has to intersect
+        *** Returns ***
+            none
+        """
+        self.board = board
+        self.A = blocks[0]  # A blocks
+        self.B = blocks[1]  # B blocks
+        self.C = blocks[2]  # C blocks
+        self.L = laser
+        self.H = points
+        length = 2 * len(self.board) + 1
+        width = 2 * len(self.board[0]) + 1
+        grid = []
+        for i in range(length):
+            grid.append([])
+            for j in range(width):
+                grid[i].append('x')
+        for i in range(len(self.board)):
+            for j in range(len(self.board[0])):
+                grid[2 * i + 1][2 * j + 1] = self.board[i][j]
+        self.grid = grid
+
+
 def load_file(fptr):
     '''
     :param:
@@ -133,7 +178,6 @@ def load_file(fptr):
 
 
 def solve_recursively(empty, blocks, grid, laser, points, n, blk_pos=[], blk_type=[], j=0):
-
     '''
     :param:
     empty: list of lists containing x,y coordinates of available spaces to put blocks
@@ -172,7 +216,6 @@ def solve_recursively(empty, blocks, grid, laser, points, n, blk_pos=[], blk_typ
 
 
 def is_solution(block_positions, block_types, grid, laser, points):
-
     # Set values of grid
     for i in range(len(block_positions)):
         y = block_positions[i][0]
@@ -207,7 +250,145 @@ def is_solution(block_positions, block_types, grid, laser, points):
         return True
 
 
+def next_laser_direction(grid, position, direction):
+    """
+    This function calculates the laser's new direction depending on its
+    position and the type of the block it comes across;
+
+    *** Parameters ***
+        grid:
+            List of lists representing the board
+        position:
+            Current position of the laser (array)
+        direction:
+            Current direction of the laser (array)
+
+    *** Returns ***
+        new_direction:
+            New direction the laser is taking depending on the type of
+            block it hits and its original position
+    """
+    x = position[0]
+    y = position[1]
+    if y % 2 == 0:
+        """
+        If y is even, the block is above or below
+        """
+        if grid[y + direction[1]][x].lower() == 'o' or grid[y + direction[1]][x].lower() == 'x':
+            new_direction = direction
+        elif grid[y + direction[1]][x].lower() == 'A':
+            new_direction = [direction[0], -1 * direction[1]]
+        elif grid[y + direction[1]][x].lower() == 'B':
+            new_direction = []
+        elif grid[y + direction[1]][x].lower() == 'C':
+            d_1 = direction
+            d_2 = [direction[0], -1 * direction[1]]
+            new_direction = [d_1[0], d_1[1], d_2[0], d_2[1]]
+    else:
+        """
+        If y is odd, the block is left or right
+        """
+        if grid[y][x + direction[0]].lower() == 'o' or grid[y][x + direction[0]].lower() == 'x':
+            new_direction = direction
+        elif grid[y][x + direction[0]].lower() == 'A':
+            new_direction = [-1 * direction[0], direction[1]]
+        elif grid[y][x + direction[0]].lower() == 'B':
+            new_direction = []
+        elif grid[y][x + direction[0]].lower() == 'C':
+            d_1 = direction
+            d_2 = [-1 * direction[0], direction[1]]
+            new_direction = [d_1[0], d_1[1], d_2[0], d_2[1]]
+    return new_direction
+
+
+def boundary_check(grid, position, direction):
+    """
+    This function checks whether the current and next laser position is within
+    the grid's boundary. If it is, we can continue with that particular laser.
+
+    ** Parameters **
+        grid:
+            List of lists representing the board
+        pos:
+            Current position of the laser (array)
+        direc:
+            Current direction of the laser (array)
+
+    ** Returns **
+        Boolean:
+            True if laser position is in boundary, false if otherwise
+    """
+    x = position[0]
+    y = position[1]
+    y_max = len(grid) - 1
+    x_max = len(grid[0]) - 1
+    if x < 0 or x > x_max or y < 0 or y > y_max or (x + direction[0]) < 0 or (x + direction[0]) > x_max or \
+            (y + direction[1]) < 0 or (y + direction[1]) > y_max:
+        return True
+    else:
+        return False
+
+
+def laser_path(grid, lasers, holes):
+    """
+    This function returns the main path the laser goes through for a given
+    board.
+    The variable "lasers_stack: consists of the laser path for all lasers
+    available. Each step the laser takes is appended to this stack. If a
+    step the laser takes reaches a hole, the hole is then removed from
+    the "holes" list. If the "holes" list is empty, the while loops breaks
+    and returns True. If not, the loop continues until the maximum iterations
+    are reached.
+
+    *** Parameters ***
+        grid:
+            List of lists consisting of the board on which the laser moves
+        lasers:
+            Array consisting of the origin and direction of each laser
+        holes:
+            Array consisting of all the hole points
+
+    ***Returns***
+        lasers_stack:
+            List of lists of coordinates the laser took to reach the hole
+    """
+
+    # List of all lasers and and each laser list has its path
+    lasers_stack = []
+    for i in range(len(lasers)):
+        lasers_stack.append([lasers[i]])
+    iterations = 0
+    max_iter = 100
+    while len(holes) != 0 and iterations <= max_iter:
+        iterations += 1
+        for i in range(len(lasers_stack)):
+            laser_position = list(lasers_stack[i][-1][0])
+            direction = list(lasers_stack[i][-1][1])
+            if boundary_check(grid, laser_position, direction):
+                continue
+            else:
+                new_direction = next_laser_direction(grid, laser_position, direction)
+                if len(new_direction) == 0:
+                    lasers_stack[i].append([laser_position, direction])
+                elif len(new_direction) == 2:
+                    direction = new_direction
+                    laser_position = [laser_position[0] + direction[0], laser_position[1] + direction[1]]
+                    lasers_stack[i].append([laser_position, direction])
+                else:
+                    direction = new_direction
+                    laser_position_1 = [laser_position[0] + direction[0], laser_position[1] + direction[1]]
+                    laser_position_2 = [laser_position[0] + direction[2], laser_position[1] + direction[3]]
+                    lasers_stack.append([[laser_position_1, [direction[0], direction[1]]]])
+                    lasers_stack[i].append([laser_position_2, [direction[2], direction[3]]])
+                    laser_position = laser_position_2
+            if laser_position in holes:
+                holes.remove(laser_position)
+    if len(holes) == 0:
+        return True, lasers_stack
+    else:
+        return False, lasers_stack
+
+
 if __name__ == '__main__':
     Puzzle, Positions, Lasers, Movable_blocks, Targets = load_file('mad_1.bff')
     solution = solve_recursively(Positions, Movable_blocks, Puzzle, Lasers, Targets, len(Movable_blocks))
-
