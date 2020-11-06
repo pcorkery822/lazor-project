@@ -143,7 +143,7 @@ def load_file(fptr):
     laser: list of lists containing laser positions and directions
     points: list of lists containing the coordinates of each target position for the beam
     '''
-
+    assert fptr[-4:] == '.bff', "Should be .bff file"
     bff_file = open(fptr, 'r')
 
     # Initialize list for grid and boolean for reading grid
@@ -201,7 +201,10 @@ def load_file(fptr):
         row = []
         zeros = []
         for z in range(2 * len(line) + 1):
-            row.append('o')
+            if z % 2 == 0:
+                row.append('x')
+            else:
+                row.append('o')
             zeros.append('x')
         if y == 0:
             full_grid.append(zeros)
@@ -255,7 +258,7 @@ def next_laser_direction(grid, position, direction):
         elif grid[y + direction[1]][x] == 'A':
             new_direction = [direction[0], -1 * direction[1]]
         elif grid[y + direction[1]][x] == 'B':
-            new_direction = []
+            new_direction = [0, 0]
         elif grid[y + direction[1]][x] == 'C':
             d_1 = [direction[0], -1 * direction[1]]
             d_2 = direction
@@ -269,11 +272,12 @@ def next_laser_direction(grid, position, direction):
         elif grid[y][x + direction[0]] == 'A':
             new_direction = [-1 * direction[0], direction[1]]
         elif grid[y][x + direction[0]] == 'B':
-            new_direction = []
+            new_direction = [0, 0]
         elif grid[y][x + direction[0]] == 'C':
             d_1 = [-1 * direction[0], direction[1]]
             d_2 = direction
             new_direction = [d_1[0], d_1[1], d_2[0], d_2[1]]
+    assert new_direction, "Grid loaded incorrectly"
     return new_direction
 
 
@@ -369,14 +373,14 @@ def laser_path(grid, lasers, holes):
                 new_direction = next_laser_direction(grid, laser_position, [direction[0], direction[1]])
                 if iterations >= max_iter:
                     return False, lasers_stack
-                # If lazer hits opaque block, go to next lazer in stack
-                if not new_direction:
+                # If laser hits opaque block, go to next laser in stack
+                if new_direction[0] == 0:
                     break
-                # If lazer hits empty space or reflect block, change position
+                # If laser hits empty space or reflect block, change position
                 elif len(new_direction) == 2:
                     direction = new_direction
                     laser_position = [laser_position[0] + direction[0], laser_position[1] + direction[1]]
-                # If lazer hits refract block, add new laser to stack to account for split beam and readjust position
+                # If laser hits refract block, add new laser to stack to account for split beam and readjust position
                 else:
                     direction = new_direction
                     pos = laser_position
