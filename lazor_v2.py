@@ -1,5 +1,7 @@
 import copy
 import math
+from sympy.utilities.iterables import multiset_permutations
+import time
 
 
 class Blocks:
@@ -75,6 +77,83 @@ class Grid:
             for j in range(len(self.board[0])):
                 grid[2 * i + 1][2 * j + 1] = self.board[i][j]
         self.grid = grid
+
+    def blocks(self, filename):
+        """
+        This function generates all the possible boards by permuting the list
+        of all movable blocks like o's, A's, B's, and C's. Each generated board
+        is converted into a grid and then checked with "laser_path" and if the
+        generated board is the solution, the iterations performed are printed.
+
+        ** Parameters **
+            self - consists of all data (board, blocks, laser, points)
+
+        ** Returns **
+            None
+        """
+        movable_blocks = []
+        for x in self.board:
+            for y in x:
+                if y == 'o':
+                    movable_blocks.append(y)
+
+        for i in range(self.A):
+            movable_blocks[i] = 'A'
+        for i in range(self.A, (self.A + self.B)):
+            movable_blocks[i] = 'B'
+        for i in range((self.A + self.B), (self.A + self.B + self.C)):
+            movable_blocks[i] = 'C'
+        ITER_B = 0
+        print("Generating possible Boards.......", end="\r")
+        t1 = time.time()
+        permutations = list(multiset_permutations(movable_blocks))
+        t2 = time.time()
+        print("Maximum possible iteration possible : ", len(permutations))
+        print("Time for generating possible Boards: ", t2 - t1)
+        x = 0
+        print("Solving...", end="\r")
+        t1 = time.time()
+        for p in permutations:
+            holes = copy.deepcopy(self.H)
+            actual_board = copy.deepcopy(self.grid)
+            possible_grid = create_grid(actual_board, p)
+            ITER_B += 1
+            Result, lasers_stack = laser_path(possible_grid, self.L, holes)
+            if Result:
+                print("Board solved")
+                final_board = []
+                length = int((len(possible_grid) - 1) / 2)
+                width = int((len(possible_grid[0]) - 1) / 2)
+                for i in range(length):
+                    final_board.append([])
+                    for j in range(width):
+                        final_board[i].append(possible_grid[2 * i + 1][2 * j + 1])
+                        print(possible_grid[2 * i + 1][2 * j + 1], end=' ')
+                    print()
+                print("This is the solution grid! Can also check the text file created.")
+                ###
+                new_name_1 = filename.split(".bff")[0]
+                new_name_2 = new_name_1 + "_solution.txt"
+                f = open(new_name_2, "w+")
+                f.write("The solution to board is: \n")
+                for i in range(length):
+                    for j in range(width):
+                        f.write(possible_grid[2 * i + 1][2 * j + 1])
+                        f.write(" ")
+                    f.write("\n")
+                f.write("A is the reflect block, B is the opaque block and C is the refract block.")
+                f.write("The o should be empty.")
+                f.close()
+                break
+            t2 = time.time()
+            if t2 - t1 >= 5:
+                t1 = time.time()
+                b = "Solving" + "..." * x
+                print(b, end="\r")
+                if x == 3:
+                    x = 0
+                x += 1
+        print("Iterations til solved: ", ITER_B)
 
 
 def load_file(fptr):
@@ -329,6 +408,34 @@ def boundary_check(grid, position, direction):
         return False
 
 
+def create_grid(grid, p):
+    """
+    Creates a grid as explained in the top section for the given board
+    Ex) If the board is - o A   then the grid is - x x x x x
+                          B o                      x o x A x
+                                                   x x x x x
+                                                   x B x o x
+                                                   x x x x x
+
+    *** Parameters ***
+        grid:
+            List of lists representing the board
+        p:
+            List of permutations
+
+    *** Returns ***
+        grid:
+            a (2n + 1) x (2m +1) matrix if board size is n x m
+    """
+    value = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if grid[i][j] == 'o':
+                grid[i][j] = p[value]
+                value += 1
+    return grid
+
+
 def laser_path(grid, lasers, holes):
     """
     This function returns the main path the laser goes through for a given
@@ -390,5 +497,13 @@ def laser_path(grid, lasers, holes):
 
 
 if __name__ == '__main__':
-    Puzzle, Positions, Lasers, Movable_blocks, Targets = load_file('mad_1.bff')
-    solution = solve_recursively(Positions, Movable_blocks, Puzzle, Lasers, Targets, len(Movable_blocks))
+    # Puzzle, Positions, Lasers, Movable_blocks, Targets = load_file('mad_1.bff')
+    # solution = solve_recursively(Positions, Movable_blocks, Puzzle, Lasers, Targets, len(Movable_blocks))
+
+    filename = "dark_1.bff"
+    board_given, empty, blocks, laser, points = load_file(filename)
+    time_start = time.time()
+    Board = Grid(board_given, blocks, laser, points)
+    Board.blocks(filename)
+    time_end = time.time()
+    print('Run time: %f seconds' % (time_end - time_start))
